@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Video Generator</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            background-color: #f4f4f4;
+            padding: 20px;
+        }
+        textarea, button {
+            margin: 10px;
+            padding: 12px;
+            font-size: 18px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            width: 80%;
+            resize: none;
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            cursor: pointer;
+            transition: 0.3s;
+        }
+        button:disabled {
+            background-color: #999;
+            cursor: not-allowed;
+        }
+        video {
+            width: 80%;
+            margin-top: 20px;
+            display: none;
+            border-radius: 10px;
+        }
+        .loading {
+            display: none;
+            font-size: 18px;
+            color: blue;
+        }
+        .error {
+            color: red;
+            font-size: 16px;
+        }
+        .spinner {
+            display: none;
+            margin: 10px auto;
+            width: 40px;
+            height: 40px;
+            border: 5px solid rgba(0, 0, 255, 0.2);
+            border-top: 5px solid blue;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+    <script defer>
+        document.addEventListener("DOMContentLoaded", () => {
+            document.getElementById("prompt").focus();
+        });
+
+        async function generateVideo() {
+            let prompt = document.getElementById("prompt").value.trim();
+            let videoPlayer = document.getElementById("videoPlayer");
+            let loading = document.getElementById("loading");
+            let errorMsg = document.getElementById("errorMsg");
+            let generateButton = document.getElementById("generateButton");
+            let spinner = document.getElementById("spinner");
+
+            if (!prompt) {
+                errorMsg.innerText = "Please enter a valid prompt!";
+                return;
+            }
+
+            errorMsg.innerText = "";
+            loading.style.display = "block";
+            spinner.style.display = "block";
+            videoPlayer.style.display = "none";
+            generateButton.disabled = true;
+            document.getElementById("prompt").disabled = true;
+
+            try {
+                let response = await fetch('/generate', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ prompt })
+                });
+
+                if (!response.ok) {
+                    throw new Error("Server Error! Please try again.");
+                }
+
+                let data = await response.json();
+                if (!data.video_url) throw new Error("Failed to generate video");
+
+                videoPlayer.src = data.video_url;
+                videoPlayer.style.display = "block";
+                videoPlayer.loop = true;
+                videoPlayer.play();
+            } catch (error) {
+                errorMsg.innerText = "Error: " + error.message;
+            } finally {
+                loading.style.display = "none";
+                spinner.style.display = "none";
+                generateButton.disabled = false;
+                document.getElementById("prompt").disabled = false;
+            }
+        }
+    </script>
+</head>
+<body>
+    <h1>AI Video Generator</h1>
+    <textarea id="prompt" placeholder="Enter your prompt, e.g., 'A futuristic city at sunset'"></textarea>
+    <br>
+    <button id="generateButton" onclick="generateVideo()">Generate Video</button>
+    <div id="spinner" class="spinner"></div>
+    <p id="loading" class="loading">Generating video... Please wait.</p>
+    <p id="errorMsg" class="error"></p>
+    <video id="videoPlayer" controls></video>
+</body>
+</html>
